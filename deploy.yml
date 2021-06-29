@@ -1,0 +1,74 @@
+---
+- hosts: dev
+  vars_files:
+    - vars.yml
+  tasks: 
+  - name: Copy ROOT.war file to  Devops Server
+    fetch:
+      src: "{{ releaseWar }}"
+      dest: "{{ newWarDest }}"
+      flat: yes
+      validate_checksum: yes   
+
+- hosts: master
+  vars_files:
+    - vars.yml
+  tasks: 
+  - name: Clone Props
+    git:
+      repo: "{{ clone }}"
+      version: master
+      dest: "{{ newPropDest }}"
+      accept_hostkey: yes
+
+- hosts: "{{ module }}"
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Backup ROOT.war file from Webapps 
+      copy:
+        src: "{{ war }}"
+        dest: "{{ oldWarDest }}"
+        remote_src: yes
+
+    - name: Stop Tomcat
+      shell: "{{ stop }}"
+
+    - name: start script
+      shell: "{{ ps }}"
+      register: running_processes
+
+    - name: Kill running processes
+      shell: "kill -9 {{ item }}"
+      with_items: "{{ running_processes.stdout_lines }}"
+
+    - name: Remove ROOT.war file from webapps
+      file:
+        path: "{{ webapps }}/{{ item }}"
+        state: absent
+      with_items:
+        - ROOT
+        - ROOT.war
+
+    - name: Copy ROOT.war file to Server
+      copy:
+        src: "{{ newWarDest }}/{{ module|upper }}.war"
+        dest: "{{ war }}"
+
+    - name: copy Props file from Config
+      copy:
+        src: "{{ prop }}"
+        dest: "{{ oldPropDest }}"
+        remote_src: yes 
+      when: props | bool
+
+    - name: Copy Props file to Server
+      copy:
+        src: "{{ newProp }}"
+        dest: "{{ prop }}"
+        owner: "{{ module }}"
+        group: "{{ module }}"
+      when: props | bool
+
+    - name: Start Tomcat
+      shell: "{{ start }}"

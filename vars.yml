@@ -1,0 +1,35 @@
+#Fetch Release-war from Dev
+releaseWar: /home/artifact-app/{{ release }}/{{ module }}.war
+newWarDest: /root/deploy/war/
+
+#Clone Prop Files
+clone: http://root@gitlab-server/app/app-props.git
+newPropDest: /root/deploy/props/
+
+#Date
+date: "{{ ansible_date_time.date }}-{{ ansible_date_time.time }}"
+
+#Backup War
+war: /home/{{ module }}/{{ module }}/webapps/ROOT.war
+oldWarDest: /backup/war/ROOT.war-{{ module }}-{{ date }}
+
+#Stop Tomcat
+shutdown: /home/{{ module }}/{{ module }}/bin/shutdown.sh
+stop: su - {{ module }} -c {{ shutdown }}
+ps: ps aux|grep {{ module }}|grep java|grep -v grep| awk {'print $2'}
+
+#Remove Old War Files
+webapps: /home/{{ module }}/{{ module }}/webapps
+
+#Copy war to Server
+
+#Backup Prop Files
+prop: /home/{{ module }}/{{ module }}/conf/app_{{ module }}_prop.yml
+oldPropDest: /backup/props/app_{{ module }}_prop.yml-{{ date }}
+
+#Copy prop to Server
+newProp: /root/deploy/props/ir/app_{{ module }}_prop.yml
+
+#Start Tomcat
+startup: /home/{{ module }}/{{ module }}/bin/startup.sh
+start: su - {{ module }} -c {{ startup }}
